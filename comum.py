@@ -20,24 +20,24 @@ def calcular_score(df: DataFrame, solucao, TEMPO_COBERTURA):
         if tipo_ambulancia == "A":
             ganho = df.loc[list(novas_regioes), "demanda_complexa"].sum()
             score_ambulancia_do_tipo_A += ganho
-            
+
         elif tipo_ambulancia == "B":
             ganho = df.loc[list(novas_regioes), "demanda_simples"].sum()
             score_ambulancia_do_tipo_B += ganho
 
         else:
             ganho = 0.0
-            
+
         score_total += ganho
         regioes_cobertas_total.update(novas_regioes)
-     
 
-        return {
-            "score_total": score_total, 
-            "score_ambulancia_tipo_A": score_ambulancia_do_tipo_A, 
-            "score_ambulancia_tipo_B": score_ambulancia_do_tipo_B, 
-            "quant_regioes_cobertas_total": len(regioes_cobertas_total)
-        }
+    # BUG CORRIGIDO: return estava dentro do for, retornava após a 1ª iteração
+    return {
+        "score_total": score_total,
+        "score_ambulancia_tipo_A": score_ambulancia_do_tipo_A,
+        "score_ambulancia_tipo_B": score_ambulancia_do_tipo_B,
+        "quant_regioes_cobertas_total": len(regioes_cobertas_total)
+    }
 
 # ---------------------------------------------------------
 
@@ -80,7 +80,7 @@ def escolher_da_lista_de_candidatos_restritos(avaliacoes, ALPHA):
     limite = melhor_ganho - ALPHA * (melhor_ganho - pior_ganho)
 
     lista_restrita = [
-        avaliacao 
+        avaliacao
         for avaliacao in avaliacoes
         if avaliacao["ganho"] >= limite
     ]
@@ -98,7 +98,7 @@ def construir_solucao(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA
 
     # Reorganiza de maneira aleatória a lista de ambulâncias disponíveis para alocação.
     random.shuffle(ambulancias_para_alocar)
-    
+
     locais_disponiveis = set(df.index.astype(str))
 
     for tipo_ambulancia in ambulancias_para_alocar:
@@ -108,11 +108,11 @@ def construir_solucao(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA
             ganho = calcular_ganho_da_alocacao_de_ambulancia_para_regiao(
                 df=df,
                 local_id=local_id,
-                tipo_ambulancia = tipo_ambulancia,
-                regioes_ja_cobertas = regioes_ja_cobertas,
+                tipo_ambulancia=tipo_ambulancia,
+                regioes_ja_cobertas=regioes_ja_cobertas,
                 TEMPO_DE_COBERTURA=TEMPO_COBERTURA
-                )
-            
+            )
+
             avaliacoes.append({
                 "local_id": local_id,
                 "tipo_ambulancia": tipo_ambulancia,
@@ -130,10 +130,12 @@ def construir_solucao(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA
         regioes_ja_cobertas.update(regioes_cobertas)
 
         locais_disponiveis.remove(local_escolhido)
-        
-        return solucao
-    
-# ---------------------------------------------------------    
+
+    # BUG CORRIGIDO: return estava dentro do for, retornava após alocar só 1 ambulância.
+    # A solução é o conjunto completo de todas as alocações (A + B).
+    return solucao
+
+# ---------------------------------------------------------
 
 def gerar_vizinhos(df: DataFrame, solucao):
     vizinhos = []
@@ -167,7 +169,7 @@ def busca_local(df: DataFrame, solucao, TEMPO_COBERTURA):
 
     while melhorou:
         melhorou = False
-        
+
         for vizinho in gerar_vizinhos(df=df, solucao=melhor_solucao):
             avaliacao_vizinho = calcular_score(df=df, solucao=vizinho, TEMPO_COBERTURA=TEMPO_COBERTURA)
 
@@ -176,8 +178,7 @@ def busca_local(df: DataFrame, solucao, TEMPO_COBERTURA):
                 melhor_avaliacao = avaliacao_vizinho
                 melhorou = True
                 break
-                
+
     return melhor_solucao
 
 # ---------------------------------------------------------
-

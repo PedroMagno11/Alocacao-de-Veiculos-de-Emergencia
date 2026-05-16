@@ -3,12 +3,19 @@ import pandas as pd
 from pandas import DataFrame
 from comum import construir_solucao, busca_local, calcular_score, eh_melhor
 
+
 def grasp(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA, TEMPO_COBERTURA, ITERACOES):
     melhor_solucao_global = None
     melhor_avaliacao_global = None
 
     for iteracao in range(ITERACOES):
-        solucao_inicial = construir_solucao(df=df, QTD_AMBULANCIAS_A=QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B=QTD_AMBULANCIAS_B, ALPHA=ALPHA, TEMPO_COBERTURA=TEMPO_COBERTURA)
+        solucao_inicial = construir_solucao(
+            df=df,
+            QTD_AMBULANCIAS_A=QTD_AMBULANCIAS_A,
+            QTD_AMBULANCIAS_B=QTD_AMBULANCIAS_B,
+            ALPHA=ALPHA,
+            TEMPO_COBERTURA=TEMPO_COBERTURA
+        )
         solucao_melhorada = busca_local(df=df, solucao=solucao_inicial, TEMPO_COBERTURA=TEMPO_COBERTURA)
 
         avaliacao = calcular_score(df=df, solucao=solucao_melhorada, TEMPO_COBERTURA=TEMPO_COBERTURA)
@@ -16,7 +23,7 @@ def grasp(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA, TEMPO_COBE
         if eh_melhor(nova_avaliacao=avaliacao, melhor_avaliacao=melhor_avaliacao_global):
             melhor_solucao_global = solucao_melhorada
             melhor_avaliacao_global = avaliacao
-        
+
         print(
             f"Iteração {iteracao + 1} | "
             f"Score: {avaliacao['score_total']:.2f} | "
@@ -29,7 +36,7 @@ def grasp(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA, TEMPO_COBE
 
 # ----------------------
 
-def imprimir_resultado(melhor_solucao, melhor_avaliacao):
+def imprimir_resultado(df: DataFrame, melhor_solucao, melhor_avaliacao):
     print("\n==============================")
     print("MELHOR SOLUÇÃO ENCONTRADA")
     print("==============================")
@@ -50,30 +57,32 @@ def imprimir_resultado(melhor_solucao, melhor_avaliacao):
     print("AVALIAÇÃO")
     print("==============================")
     print(f"Score total: {melhor_avaliacao['score_total']:.2f}")
-    print(f"Score por ambulâncias A: {melhor_avaliacao["score_ambulancia_tipo_A"]:.2f}")
-    print(f"Score por ambulâncias B: {melhor_avaliacao["score_ambulancia_tipo_B"]:.2f}")
+    print(f"Score por ambulâncias A: {melhor_avaliacao['score_ambulancia_tipo_A']:.2f}")
+    print(f"Score por ambulâncias B: {melhor_avaliacao['score_ambulancia_tipo_B']:.2f}")
     print(f"Regiões cobertas no total: {melhor_avaliacao['quant_regioes_cobertas_total']}")
 
 
 if __name__ == "__main__":
-    TEMPO_DE_COBERTURA = 5 # minutos
+    TEMPO_DE_COBERTURA = 5  # minutos
 
     QTD_AMBULANCIAS_A = 2
     QTD_AMBULANCIAS_B = 6
 
-    ITERACOES = 5
+    ITERACOES = 100
     ALPHA = 0.3
 
     random.seed(42)
 
     df = pd.read_pickle("dados.pkl")
-    
+
     melhor_solucao, melhor_avaliacao = grasp(
-        df=df, 
-        QTD_AMBULANCIAS_A=QTD_AMBULANCIAS_A, 
+        df=df,
+        QTD_AMBULANCIAS_A=QTD_AMBULANCIAS_A,
         QTD_AMBULANCIAS_B=QTD_AMBULANCIAS_B,
-        ALPHA=ALPHA, 
+        ALPHA=ALPHA,
         TEMPO_COBERTURA=TEMPO_DE_COBERTURA,
         ITERACOES=ITERACOES
     )
-    imprimir_resultado(melhor_solucao, melhor_avaliacao)
+
+    # BUG CORRIGIDO: df não era passado como argumento para imprimir_resultado
+    imprimir_resultado(df=df, melhor_solucao=melhor_solucao, melhor_avaliacao=melhor_avaliacao)
