@@ -7,24 +7,38 @@ from pandas import DataFrame
 # Eliminam df.loc[] dentro de qualquer loop em todas as funções.
 # -----------------------------------------------------------------------
 
-_demanda_complexa: dict = {}
-_demanda_simples:  dict = {}
-_cobertura_cache:  dict = {}   # (local_id, tempo_cobertura) → set de regiões
+_demanda_complexa:     dict = {}
+_demanda_simples:      dict = {}
+_cobertura_cache:      dict = {}   # (local_id, tempo_cobertura) → set de regiões
+_indice_reverso_cache: dict = {}   # tempo_cobertura → {regiao: set de locais}
+_locais_cache:         dict = {}   # tempo_cobertura → list de local_ids
 
 
 def _garantir_cache(df: DataFrame, TEMPO_COBERTURA: int):
     global _demanda_complexa, _demanda_simples, _cobertura_cache
+    global _indice_reverso_cache, _locais_cache
+
+    locais = list(df.index.astype(str))
+    _locais_cache[TEMPO_COBERTURA] = locais
 
     if not _demanda_complexa:
         _demanda_complexa = df["demanda_complexa"].to_dict()
         _demanda_simples  = df["demanda_simples"].to_dict()
 
-    locais = list(df.index.astype(str))
     if (locais[0], TEMPO_COBERTURA) not in _cobertura_cache:
         for local_id in locais:
             _cobertura_cache[(local_id, TEMPO_COBERTURA)] = set(
                 df.loc[local_id, f"cobertura_{TEMPO_COBERTURA}_min"]
             )
+
+    if TEMPO_COBERTURA not in _indice_reverso_cache:
+        regiao_para_locais: dict = {}
+        for local_id in locais:
+            for r in _cobertura(local_id, TEMPO_COBERTURA):
+                if r not in regiao_para_locais:
+                    regiao_para_locais[r] = set()
+                regiao_para_locais[r].add(local_id)
+        _indice_reverso_cache[TEMPO_COBERTURA] = regiao_para_locais
 
 
 def _somar(regioes: set, tipo: str) -> float:
@@ -140,14 +154,24 @@ def calcular_delta(
     cobertura_por_regiao   = estado["cobertura_por_regiao"]
     regioes_cobertas_total = estado["regioes_cobertas_total"]
 
-    regioes_antigo     = _cobertura(local_antigo, TEMPO_COBERTURA)
-    regioes_exclusivas = {r for r in regioes_antigo if cobertura_por_regiao.get(r, 0) == 1}
-    perda              = _somar(regioes_exclusivas, tipo_ambulancia)
+    regioes_antigo = _cobertura(local_antigo, TEMPO_COBERTURA)
+    regioes_novo   = _cobertura(novo_local,   TEMPO_COBERTURA)
 
-    regioes_novo        = _cobertura(novo_local, TEMPO_COBERTURA)
-    regioes_descobertas = regioes_cobertas_total - regioes_antigo
-    regioes_novas       = regioes_novo - regioes_descobertas - regioes_exclusivas
-    ganho               = _somar(regioes_novas, tipo_ambulancia)
+    # Regiões que ficam descobertas ao remover local_antigo:
+    # apenas as que ele cobre sozinho (contagem == 1)
+    regioes_perdidas = {
+        r for r in regioes_antigo
+        if cobertura_por_regiao.get(r, 0) == 1
+    }
+    perda = _somar(regioes_perdidas, tipo_ambulancia)
+
+    # Regiões ainda cobertas após remover local_antigo
+    # (inclui as que outro local também cobre)
+    regioes_cobertas_sem_antigo = regioes_cobertas_total - regioes_perdidas
+
+    # Regiões efetivamente novas que novo_local traz
+    regioes_ganhas = regioes_novo - regioes_cobertas_sem_antigo
+    ganho = _somar(regioes_ganhas, tipo_ambulancia)
 
     return ganho - perda
 
@@ -202,16 +226,11 @@ def construir_solucao(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA
     ambulancias_para_alocar = ["A"] * QTD_AMBULANCIAS_A + ["B"] * QTD_AMBULANCIAS_B
     random.shuffle(ambulancias_para_alocar)
 
-    locais_disponiveis     = list(df.index.astype(str))
+    locais_disponiveis     = list(_locais_cache[TEMPO_COBERTURA])
     locais_disponiveis_set = set(locais_disponiveis)
 
-    # Índice reverso: regiao → conjunto de locais que a cobrem
-    regiao_para_locais: dict[str, set] = {}
-    for local_id in locais_disponiveis:
-        for r in _cobertura(local_id, TEMPO_COBERTURA):
-            if r not in regiao_para_locais:
-                regiao_para_locais[r] = set()
-            regiao_para_locais[r].add(local_id)
+    # Índice reverso já pré-computado no cache global
+    regiao_para_locais = _indice_reverso_cache[TEMPO_COBERTURA]
 
     # Ganhos iniciais (1ª ambulância, regioes_ja_cobertas ainda vazio)
     tipo_inicial = ambulancias_para_alocar[0]
@@ -280,7 +299,7 @@ def busca_local(df: DataFrame, solucao, TEMPO_COBERTURA, MAX_ROUNDS_SEM_MELHORIA
     estado         = calcular_estado(df, melhor_solucao, TEMPO_COBERTURA)
 
     locais_usados     = {local_id for local_id, _ in melhor_solucao}
-    candidatos_livres = [lid for lid in df.index.astype(str) if lid not in locais_usados]
+    candidatos_livres = [lid for lid in _locais_cache[TEMPO_COBERTURA] if lid not in locais_usados]
 
     rounds_sem_melhoria = 0
 
@@ -321,7 +340,11 @@ def busca_local(df: DataFrame, solucao, TEMPO_COBERTURA, MAX_ROUNDS_SEM_MELHORIA
             and rounds_sem_melhoria >= MAX_ROUNDS_SEM_MELHORIA
         )
 
-        if parar_por_limite or not melhorou:
+        if parar_por_limite:
+            break
+
+        # Sem limite definido: para quando nenhum vizinho melhora (convergência)
+        if MAX_ROUNDS_SEM_MELHORIA is None and not melhorou:
             break
 
     return melhor_solucao
