@@ -204,36 +204,73 @@ def escolher_da_lista_de_candidatos_restritos(avaliacoes, ALPHA):
 # -----------------------------------------------------------------------
 
 def construir_solucao(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA, TEMPO_COBERTURA):
+    """
+    Versão incremental: pré-computa os ganhos de todos os locais na
+    primeira ambulância e, nas seguintes, só recalcula os locais cujas
+    regiões se sobrepõem ao local recém-escolhido — que são os únicos
+    cujo ganho pode ter mudado.
+
+    Complexidade por ambulância:
+        Antes:  O(n × regioes_media)   — recalcula todos os n locais
+        Depois: O(vizinhos_afetados × regioes_media) — tipicamente << n
+    """
     solucao             = []
     regioes_ja_cobertas = set()
 
     ambulancias_para_alocar = ["A"] * QTD_AMBULANCIAS_A + ["B"] * QTD_AMBULANCIAS_B
     random.shuffle(ambulancias_para_alocar)
 
-    locais_disponiveis = set(df.index.astype(str))
+    col_por_tipo = {"A": "demanda_complexa", "B": "demanda_simples"}
 
-    for tipo_ambulancia in ambulancias_para_alocar:
-        avaliacoes = []
+    locais_disponiveis = list(df.index.astype(str))
 
-        for local_id in locais_disponiveis:
-            ganho = calcular_ganho_da_alocacao_de_ambulancia_para_regiao(
-                df=df,
-                local_id=local_id,
-                tipo_ambulancia=tipo_ambulancia,
-                regioes_ja_cobertas=regioes_ja_cobertas,
-                TEMPO_DE_COBERTURA=TEMPO_COBERTURA
-            )
-            avaliacoes.append({"local_id": local_id, "tipo_ambulancia": tipo_ambulancia, "ganho": ganho})
+    # Pré-computa cobertura de cada local como set (evita recriar a cada iteração)
+    cobertura_cache = {
+        local_id: set(df.loc[local_id, f"cobertura_{TEMPO_COBERTURA}_min"])
+        for local_id in locais_disponiveis
+    }
 
-        escolhido      = escolher_da_lista_de_candidatos_restritos(avaliacoes=avaliacoes, ALPHA=ALPHA)
+    # Ganhos iniciais — calculados uma única vez para a 1ª ambulância
+    tipo_atual = ambulancias_para_alocar[0]
+    col_atual  = col_por_tipo.get(tipo_atual, None)
+
+    ganhos = {}
+    for local_id in locais_disponiveis:
+        regioes_novas    = cobertura_cache[local_id] - regioes_ja_cobertas
+        ganhos[local_id] = df.loc[list(regioes_novas), col_atual].sum() if (regioes_novas and col_atual) else 0.0
+
+    for idx_amb, tipo_ambulancia in enumerate(ambulancias_para_alocar):
+        col_atual = col_por_tipo.get(tipo_ambulancia, None)
+
+        # Se o tipo mudou em relação ao anterior, recalcula todos os ganhos
+        # (ocorre no máximo uma vez, na transição A→B ou B→A)
+        if idx_amb > 0 and tipo_ambulancia != ambulancias_para_alocar[idx_amb - 1]:
+            for local_id in locais_disponiveis:
+                regioes_novas    = cobertura_cache[local_id] - regioes_ja_cobertas
+                ganhos[local_id] = df.loc[list(regioes_novas), col_atual].sum() if (regioes_novas and col_atual) else 0.0
+
+        avaliacoes = [
+            {"local_id": local_id, "tipo_ambulancia": tipo_ambulancia, "ganho": ganhos[local_id]}
+            for local_id in locais_disponiveis
+        ]
+
+        escolhido       = escolher_da_lista_de_candidatos_restritos(avaliacoes=avaliacoes, ALPHA=ALPHA)
         local_escolhido = escolhido["local_id"]
         tipo_escolhido  = escolhido["tipo_ambulancia"]
 
         solucao.append((local_escolhido, tipo_escolhido))
 
-        regioes_cobertas = set(df.loc[local_escolhido, f"cobertura_{TEMPO_COBERTURA}_min"])
-        regioes_ja_cobertas.update(regioes_cobertas)
+        regioes_novas_cobertas = cobertura_cache[local_escolhido] - regioes_ja_cobertas
+        regioes_ja_cobertas.update(regioes_novas_cobertas)
         locais_disponiveis.remove(local_escolhido)
+        del ganhos[local_escolhido]
+
+        # Recalcula ganho APENAS dos locais que cobrem alguma das regiões
+        # recém-adicionadas — os únicos cujo ganho pode ter diminuído.
+        for local_id in locais_disponiveis:
+            if cobertura_cache[local_id] & regioes_novas_cobertas:
+                regioes_novas    = cobertura_cache[local_id] - regioes_ja_cobertas
+                ganhos[local_id] = df.loc[list(regioes_novas), col_atual].sum() if (regioes_novas and col_atual) else 0.0
 
     return solucao
 
