@@ -287,11 +287,32 @@ def construir_solucao(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA
 # Busca local com avaliação incremental (delta)
 # -----------------------------------------------------------------------
 
-def busca_local(df: DataFrame, solucao, TEMPO_COBERTURA, MAX_ROUNDS_SEM_MELHORIA: int = None):
+def busca_local(
+    df: DataFrame,
+    solucao,
+    TEMPO_COBERTURA,
+    MAX_ROUNDS_SEM_MELHORIA: int = None,
+    MAX_CANDIDATOS_POR_ROUND: int = None,
+):
     """
-    MAX_ROUNDS_SEM_MELHORIA
-        None → para só quando nenhum vizinho melhora (convergência total)
-        N    → para após N rounds consecutivos sem melhoria
+    Busca local com avaliação incremental por delta.
+
+    Parâmetros
+    ----------
+    MAX_ROUNDS_SEM_MELHORIA : int | None
+        Para após N rounds consecutivos sem melhoria.
+        None = convergência total (só para quando nenhum vizinho melhora).
+
+    MAX_CANDIDATOS_POR_ROUND : int | None
+        Limita quantos candidatos livres são avaliados por posição por round.
+        None = avalia todos (~3011 com 3016 locais).
+        Valores entre 100–300 reduzem o tempo por round de forma linear
+        sem sacrificar muito a qualidade — a diversidade entre iterações
+        do GRASP compensa a cobertura parcial da vizinhança.
+
+        Exemplo de impacto:
+          Sem limite : ~15.000 deltas/round  (5 pos × 3011 cand)
+          Limite=200 : ~1.000 deltas/round   (5 pos × 200 cand)  → 15x mais rápido/round
     """
     _garantir_cache(df, TEMPO_COBERTURA)
 
@@ -306,8 +327,16 @@ def busca_local(df: DataFrame, solucao, TEMPO_COBERTURA, MAX_ROUNDS_SEM_MELHORIA
     while True:
         melhorou = False
 
+        # Amostra aleatória de candidatos para este round, se limite definido.
+        # Embaralhar a cada round garante que candidatos diferentes são testados
+        # ao longo dos rounds, mantendo cobertura ampla da vizinhança.
+        if MAX_CANDIDATOS_POR_ROUND is not None and MAX_CANDIDATOS_POR_ROUND < len(candidatos_livres):
+            candidatos_do_round = random.sample(candidatos_livres, MAX_CANDIDATOS_POR_ROUND)
+        else:
+            candidatos_do_round = candidatos_livres
+
         for indice, (local_atual, tipo_ambulancia) in enumerate(melhor_solucao):
-            for novo_local in candidatos_livres:
+            for novo_local in candidatos_do_round:
 
                 delta = calcular_delta(
                     df=df,
