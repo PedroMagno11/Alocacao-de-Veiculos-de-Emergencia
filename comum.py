@@ -97,11 +97,11 @@ def calcular_score(df: DataFrame, solucao, TEMPO_COBERTURA):
 def calcular_estado(df: DataFrame, solucao, TEMPO_COBERTURA) -> dict:
     _garantir_cache(df, TEMPO_COBERTURA)
 
-    regioes_cobertas_total  = set()
-    cobertura_por_regiao    = {}
-    contribuicao            = []
+    regioes_cobertas_total = set()
+    cobertura_por_regiao = {}
+    contribuicao = []
 
-    score_total             = 0.0
+    score_total = 0.0
     score_ambulancia_tipo_A = 0.0
     score_ambulancia_tipo_B = 0.0
 
@@ -211,16 +211,9 @@ def escolher_da_lista_de_candidatos_restritos(avaliacoes, ALPHA):
 # -----------------------------------------------------------------------
 
 def construir_solucao(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA, TEMPO_COBERTURA):
-    """
-    Três otimizações combinadas:
-    1. Cache de demanda em dict puro — elimina df.loc[] nos loops
-    2. Índice reverso regiao→locais — encontra locais afetados sem
-       testar interseção contra todos os 3016
-    3. Ganhos incrementais — só recalcula os locais afetados pela escolha
-    """
     _garantir_cache(df, TEMPO_COBERTURA)
 
-    solucao             = []
+    solucao = []
     regioes_ja_cobertas = set()
 
     ambulancias_para_alocar = ["A"] * QTD_AMBULANCIAS_A + ["B"] * QTD_AMBULANCIAS_B
@@ -241,7 +234,7 @@ def construir_solucao(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA
 
     for idx_amb, tipo_ambulancia in enumerate(ambulancias_para_alocar):
 
-        # Mudança de tipo A↔B: recalcula todos (ocorre no máximo uma vez)
+        # Mudança de tipo A <-> B: recalcula todos (ocorre no máximo uma vez)
         if idx_amb > 0 and tipo_ambulancia != ambulancias_para_alocar[idx_amb - 1]:
             ganhos = {
                 local_id: _somar(
@@ -268,7 +261,7 @@ def construir_solucao(df: DataFrame, QTD_AMBULANCIAS_A, QTD_AMBULANCIAS_B, ALPHA
         locais_disponiveis_set.remove(local_escolhido)
         del ganhos[local_escolhido]
 
-        # Índice reverso → só recalcula locais realmente afetados
+        # Índice reverso -> só recalcula locais realmente afetados
         locais_afetados = set()
         for r in regioes_novas_cobertas:
             locais_afetados.update(regiao_para_locais.get(r, set()))

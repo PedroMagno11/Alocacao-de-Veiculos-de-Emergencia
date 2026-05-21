@@ -4,7 +4,7 @@ import numpy as np
 
 from baseline.POSSIBLE import DISTRICTS_POINTS
 from models import Localizacao, Alocacao
-from util import distancia_haversine
+from util import distancia_haversine, distancia_euclidiana
 
 
 def corrigir_texto_milhar(valor):
@@ -47,52 +47,16 @@ for i in range(len(df_localizacoes)):
     loc = Localizacao(**df_localizacoes.iloc[i].to_dict())
     locais_de_atendimento.append(loc)
 
-def avaliar_e_classificar_complexidade_operacional_baseado_na_demanda_da_localidade(peso: float) -> dict:
-    if peso >= 80:
-        return {
-            "complexidade": "complexo",
-            "demanda_simples": peso * 0.3,
-            "demanda_complexa": peso * 0.7,
-            "prioridade_A": peso * 1.5,
-            "prioridade_B": peso * 0.6
-        }
-
-    elif peso >= 60:
-        return {
-            "complexidade": "misto",
-            "demanda_simples": peso * 0.5,
-            "demanda_complexa": peso * 0.5,
-            "prioridade_A": peso,
-            "prioridade_B": peso
-        }
-
-    else:
-        return {
-            "complexidade": "simples",
-            "demanda_simples": peso * 0.8,
-            "demanda_complexa": peso * 0.2,
-            "prioridade_A": peso * 0.5,
-            "prioridade_B": peso * 1.2
-        }
-
-
 alocacoes = []
 
 for local_id, linha in df_localizacoes.iterrows():
     loc = Localizacao(**linha.to_dict())
 
-    perfil_demanda = avaliar_e_classificar_complexidade_operacional_baseado_na_demanda_da_localidade(loc.peso)
-
     alocacao = Alocacao(
         local_id = str(local_id),
         latitude = loc.latitude,
         longitude = loc.longitude,
-        peso = loc.peso,
-        complexidade = perfil_demanda["complexidade"],
-        demanda_simples = perfil_demanda["demanda_simples"],
-        demanda_complexa = perfil_demanda["demanda_complexa"],
-        prioridade_aloc_ambulancia_A = perfil_demanda["prioridade_A"],
-        prioridade_aloc_ambulancia_B = perfil_demanda["prioridade_B"])
+        peso = loc.peso)
     
     alocacoes.append(alocacao)
 
@@ -112,7 +76,7 @@ def construir_matriz_distancias() -> dict:
         for j in ids:
             lng2, lat2, _ = DISTRICTS_POINTS[j]
 
-            distancia = distancia_haversine(lat1, lng1, lat2, lng2)
+            distancia = distancia_euclidiana(lat1, lng1, lat2, lng2)
 
             matriz_distancias[i][j] = distancia
     
@@ -150,7 +114,7 @@ def adicionar_areas_cobertas_ao_dataframe(df: DataFrame, areas_cobertas: dict):
 
 # Gera a matriz de distância entre as regiões e o conjunto de regiões cobertas
 VELOCIDADE_MEDIA_KMH = 40
-TEMPOS_MIN = [5,10,15] # em minutos
+TEMPOS_MIN = [5,10] # em minutos
 
 matriz_de_distancias = construir_matriz_distancias()
 
