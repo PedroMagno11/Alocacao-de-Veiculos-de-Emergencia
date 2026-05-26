@@ -26,10 +26,14 @@ def main():
     for id_regiao, coberturas_por_tipo in pontos_cobertos.items():
         for tipo, pontos in coberturas_por_tipo.items():
             print(f"P_{id_regiao}^{tipo} = {sorted(pontos)}")
-            
-    # 1 - 
 
     # return dataframe, pontos_cobertos
+    
+    
+    # 1 - instancia pre-processada e salva em arquivo
+    # 2 - validar separadamente construcao e busca local
+    # 3 - validação do grasp
+    # (obs.:) os códigos dos componentes (construcao, busca local, grasp) podem ser escritos em arquivos separados e importados aqui)
 
 if __name__ == "__main__":
     main()
