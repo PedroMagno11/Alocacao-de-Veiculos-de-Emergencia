@@ -114,7 +114,7 @@ def adicionar_areas_cobertas_ao_dataframe(df: DataFrame, areas_cobertas: dict):
 
 # Gera a matriz de distância entre as regiões e o conjunto de regiões cobertas
 VELOCIDADE_MEDIA_KMH = 40
-TEMPOS_MIN = [5,10] # em minutos
+TEMPOS_MIN = [5] # em minutos
 
 matriz_de_distancias = construir_matriz_distancias()
 
@@ -124,7 +124,7 @@ areas_cobertas = obter_regioes_cobertas_por_tempo(
     tempos_em_minutos=TEMPOS_MIN
 )
 
-df_com_regioes_cobertas = adicionar_areas_cobertas_ao_dataframe(df_alocacoes, areas_cobertas=areas_cobertas)
-
-df_com_regioes_cobertas.to_pickle("dados.pkl")
-df_com_regioes_cobertas.to_csv("dados.csv")
+# df_com_regioes_cobertas = adicionar_areas_cobertas_ao_dataframe(df_alocacoes, areas_cobertas=areas_cobertas)
+df_alocacoes.to_csv("dados.csv")
+# df_com_regioes_cobertas.to_pickle("dados.pkl")
+# df_com_regioes_cobertas.to_csv("dados.csv")
