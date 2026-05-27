@@ -1,11 +1,15 @@
 """
-Leitura de instancias e pre-processamento dos conjuntos de cobertura P_i^t
-para o PMCS-FA.
+Leitura de instancias e consulta dos conjuntos de cobertura P_i^t
+pre-calculados para o PMCS-FA.
 """
 
+from ast import literal_eval
 from math import asin, cos, radians, sin, sqrt
 
 import pandas
+
+
+PREFIXO_COLUNA_COBERTURA = "pontos_cobertos_tipo_"
 
 
 def ler_instancia(caminho_arquivo):
@@ -46,36 +50,88 @@ def calcular_distancia_haversine(latitude1, longitude1, latitude2, longitude2):
     return 2.0 * raio_terra_km * asin(sqrt(termo_haversine))
 
 
-def pre_computar_pontos_cobertos(dataframe, tipos_ambulancia):
+def obter_nome_coluna_cobertura(tipo):
+    """Retorna o nome da coluna que armazena a cobertura de um tipo."""
+    return f"{PREFIXO_COLUNA_COBERTURA}{tipo}"
+
+
+def _normalizar_pontos_cobertos(valor):
     """
-    Pre-computa, para cada regiao base e cada tipo de ambulancia, o conjunto
-    de pontos de demanda cobertos caso aquela ambulancia seja alocada naquela
-    regiao.
+    Converte a cobertura armazenada no dataframe para frozenset de inteiros.
+
+    A conversao aceita listas/sets ja em memoria e tambem strings no formato
+    "[1, 2, 3]", comuns quando um dataframe pre-processado foi salvo em CSV.
+    """
+    if isinstance(valor, frozenset):
+        return valor
+    if isinstance(valor, str):
+        valor = literal_eval(valor)
+    return frozenset(int(ponto) for ponto in valor)
+
+
+def dataframe_tem_pontos_cobertos(dataframe, tipos_ambulancia):
+    """Verifica se o dataframe ja possui as colunas de cobertura esperadas."""
+    return all(
+        obter_nome_coluna_cobertura(tipo) in dataframe.columns
+        for tipo in tipos_ambulancia
+    )
+
+
+def obter_colunas_cobertura_faltantes(dataframe, tipos_ambulancia):
+    """Retorna as colunas de cobertura que nao existem no dataframe."""
+    return [
+        obter_nome_coluna_cobertura(tipo)
+        for tipo in tipos_ambulancia
+        if obter_nome_coluna_cobertura(tipo) not in dataframe.columns
+    ]
+
+
+def obter_pontos_cobertos_do_dataframe(dataframe, tipos_ambulancia):
+    """
+    Consulta as colunas de cobertura do dataframe e retorna a estrutura usada
+    pelo algoritmo:
+
+      pontos_cobertos[id_regiao][tipo] = frozenset de local_ids cobertos
+    """
+    pontos_cobertos = {}
+
+    for _, linha in dataframe.iterrows():
+        id_regiao = int(linha["local_id"])
+        pontos_cobertos[id_regiao] = {}
+
+        for tipo in tipos_ambulancia:
+            nome_coluna = obter_nome_coluna_cobertura(tipo)
+            pontos_cobertos[id_regiao][tipo] = _normalizar_pontos_cobertos(
+                linha[nome_coluna]
+            )
+
+    return pontos_cobertos
+
+
+def pre_computar_pontos_cobertos(
+    dataframe,
+    tipos_ambulancia,
+):
+    """
+    Le do dataframe, para cada regiao base e cada tipo de ambulancia, o conjunto
+    de pontos de demanda cobertos.
+
+    As coberturas devem estar pre-calculadas em uma coluna por tipo:
+      pontos_cobertos_tipo_<tipo>
 
     Retorna:
       pontos_cobertos[id_regiao][tipo] = frozenset de local_ids cobertos
     """
-    coordenadas = dataframe[["local_id", "latitude", "longitude"]].values
-    pontos_cobertos = {}
+    colunas_faltantes = obter_colunas_cobertura_faltantes(
+        dataframe,
+        tipos_ambulancia,
+    )
+    if colunas_faltantes:
+        faltantes = ", ".join(colunas_faltantes)
+        raise ValueError(
+            "Instancia sem pontos cobertos pre-calculados. "
+            f"Colunas faltantes: {faltantes}. "
+            "Execute baseline/tratamento_dos_dados.py para gerar a instancia."
+        )
 
-    for linha_regiao in coordenadas:
-        id_regiao = int(linha_regiao[0])
-        latitude = linha_regiao[1]
-        longitude = linha_regiao[2]
-        pontos_cobertos[id_regiao] = {}
-
-        for tipo, configuracao in tipos_ambulancia.items():
-            raio = configuracao["raio_cobertura_km"]
-            pontos_cobertos[id_regiao][tipo] = frozenset(
-                int(linha_ponto[0])
-                for linha_ponto in coordenadas
-                if calcular_distancia_haversine(
-                    latitude,
-                    longitude,
-                    linha_ponto[1],
-                    linha_ponto[2],
-                )
-                <= raio
-            )
-
-    return pontos_cobertos
+    return obter_pontos_cobertos_do_dataframe(dataframe, tipos_ambulancia)
