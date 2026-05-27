@@ -7,6 +7,8 @@ import numpy
 import random
 import time
 
+from avaliador_viabilidade import verificar_viabilidade
+
 from PARAMETROS import (
     MAX_ITERACOES,
     MAX_ITERACOES_SEM_MELHORA,
