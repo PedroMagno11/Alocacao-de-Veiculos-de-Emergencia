@@ -22,7 +22,7 @@ import config.PARAMETROS as PARAMETROS
 from instances.read_instance import calcular_distancia_haversine, obter_nome_coluna_cobertura
 
 
-CAMINHO_REFERENCIA_PADRAO = "instancia.csv"
+CAMINHO_REFERENCIA_PADRAO = "instances/instancia.csv"
 PASTA_SAIDA_PADRAO = "instances"
 
 

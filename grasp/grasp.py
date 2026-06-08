@@ -2,12 +2,10 @@
 GRASP para o Problema de Máxima Cobertura com Sobreposição
 para Frota de Ambulâncias (PMCS-FA)
 """
-
+import time
 import numpy
 import random
-import time
-
-
+ 
 from comum.avaliador_viabilidade import verificar_viabilidade
 from config.PARAMETROS import (
     MAX_ITERACOES,
@@ -24,18 +22,18 @@ from comum.busca_local import (
     calcular_funcao_objetivo,
 )
 from grasp.construtivo_grasp import construir_solucao
-from plots.visualizacao import plotar_funcao_objetivo_por_iteracao, plotar_comparacao_funcao_objetivo_antes_e_apos_busca_local
-from instances.read_instance import (
-    ler_instancia,
-    pre_computar_pontos_cobertos,
+from plots.visualizacao import (
+    plotar_funcao_objetivo_por_iteracao,
+    plotar_comparacao_funcao_objetivo_antes_e_apos_busca_local,
 )
-
+from instances.read_instance import ler_instancia, pre_computar_pontos_cobertos
+ 
 # ============================================================
 #  GRASP
 # ============================================================
 def executar_grasp(dataframe, tipos_ambulancia, quantidade_maxima_por_tipo,
                    parametro_alpha, max_iteracoes, max_iteracoes_sem_melhora,
-                   semente_aleatoria):
+                   semente_aleatoria, tempo_limite_s = None):
     
     gerador_aleatorio = random.Random(semente_aleatoria)
     regioes           = dataframe["local_id"].tolist()
@@ -55,25 +53,38 @@ def executar_grasp(dataframe, tipos_ambulancia, quantidade_maxima_por_tipo,
         )
     print(f"  Parametro alpha (RCL)    : {parametro_alpha}  "
           f"(0 = guloso puro, 1 = aleatorio puro)")
-    print(f"  Iteracoes GRASP          : {max_iteracoes}")
+    print(f"  Iteracoes maximas        : {max_iteracoes}")
+
+    if tempo_limite_s is not None:
+        print(f"  Tempo limite             : {tempo_limite_s}s")
     print(f"  Parada busca local       : {max_iteracoes_sem_melhora} iteracoes sem melhora")
     print()
-
-    # ── Pre-processamento ──────────────────────────────────────
+ 
+    # ── Pré-processamento ──────────────────────────────────────
     print("  Carregando pontos cobertos do dataframe ...", end=" ", flush=True)
-    tempo_inicio_precomputo = time.time()
+    t_pre = time.time()
     pontos_cobertos = pre_computar_pontos_cobertos(dataframe, tipos_ambulancia)
-    tempo_precomputo = time.time() - tempo_inicio_precomputo
-    print(f"concluido em {tempo_precomputo:.1f}s\n")
+    print(f"concluido em {time.time() - t_pre:.1f}s\n")
 
     melhor_solucao   = set()
     melhor_fo        = -1e18
     historico_fo     = []
     historico_fo_antes_busca_local = []
     historico_fo_pos_busca_local = []
+
     tempo_inicio_grasp = time.time()
 
     for numero_iteracao in range(1, max_iteracoes + 1):
+
+        if tempo_limite_s is not None:
+            tempo_decorrido = time.time() - tempo_inicio_grasp
+            if tempo_decorrido >= tempo_limite_s:
+                print(
+                    f"\n  [GRASP] Tempo limite atingido após "
+                    f"{numero_iteracao - 1} iterações "
+                    f"({tempo_decorrido:.1f}s >= {tempo_limite_s}s)."
+                )
+                break
 
         # construtivo GRASP
         solucao_construida = construir_solucao(
@@ -105,17 +116,14 @@ def executar_grasp(dataframe, tipos_ambulancia, quantidade_maxima_por_tipo,
                 100.0 * len(obter_pontos_cobertos_pela_solucao(melhor_solucao, pontos_cobertos))
                 / len(dataframe)
             )
+
+            tempo_ate_melhora = time.time() - tempo_inicio_grasp
+
             print(
-                f"  [Iteracao {numero_iteracao:3d}]  "
-                f"Funcao objetivo = {melhor_fo:8.2f}  "
-                f"Alocacoes = {len(melhor_solucao):2d}  "
+                f"  [iter {numero_iteracao:4d} | {tempo_ate_melhora:6.1f}s]  "
+                f"FO = {melhor_fo:8.2f}  "
+                f"Alocações = {len(melhor_solucao):2d}  "
                 f"Cobertura = {percentual_cobertura:.1f}%"
-            )
-        melhor_solucao = solucao_construida
-        print(
-                f"  [Iteracao {numero_iteracao:3d}]  "
-                # f"Funcao objetivo = {melhor_fo:8.2f}  "
-                f"Alocacoes = {melhor_solucao}  "
             )
 
     tempo_total = time.time() - tempo_inicio_grasp
@@ -135,8 +143,10 @@ def executar_grasp(dataframe, tipos_ambulancia, quantidade_maxima_por_tipo,
     # ── Resultado final ───────────────────────────────────────
     print()
     print(separador)
-    print("  RESULTADO FINAL")
+    print("  RESULTADO FINAL - GRASP")
     print(separador)
+    print(f"  Iterações executadas     : {len(historico_fo)}")
+    print(f"  Tempo de execução        : {tempo_total:.1f}s")
     print(f"  Funcao objetivo          : {melhor_fo:.2f}")
     print(
         f"  Pontos cobertos          : "
@@ -144,51 +154,28 @@ def executar_grasp(dataframe, tipos_ambulancia, quantidade_maxima_por_tipo,
         f"({100.0 * len(pontos_cobertos_solucao) / len(dataframe):.1f}%)"
     )
     print(f"  Total de alocacoes       : {len(melhor_solucao)}")
-    print(f"  Tempo de execucao        : {tempo_total:.1f}s")
     print()
-
-    # Tabela de alocacoes
-    cabecalho_tabela = (
-        f"  {'Regiao':>7}  {'Tipo':>4}  {'Nome':10}  "
-        f"{'Latitude':>12}  {'Longitude':>13}  {'Pontos cobertos':>15}"
-    )
-    print(cabecalho_tabela)
-    print("  " + "-" * (len(cabecalho_tabela) - 2))
-    for id_regiao, tipo in sorted(melhor_solucao):
-        linha = dataframe[dataframe["local_id"] == id_regiao].iloc[0]
-        print(
-            f"  {id_regiao:7d}  {tipo:4d}  "
-            f"{tipos_ambulancia[tipo]['nome']:10}  "
-            f"{linha['latitude']:12.5f}  {linha['longitude']:13.5f}  "
-            f"{len(pontos_cobertos[id_regiao][tipo]):15d}"
-        )
-
-    print()
-    print("  Ambulancias utilizadas por tipo:")
-    for tipo, configuracao in tipos_ambulancia.items():
-        utilizadas  = contagem_final.get(tipo, 0)
-        disponivel  = quantidade_maxima_por_tipo[tipo]
-        barra       = "█" * utilizadas + "░" * (disponivel - utilizadas)
-        print(
-            f"    Tipo {tipo} ({configuracao['nome']:8s}): "
-            f"{utilizadas} de {disponivel}  [{barra}]"
-        )
-
-    print()
-    print("  Estatisticas das iteracoes do GRASP:")
-    print(f"    Melhor funcao objetivo   : {array_historico.max():.2f}")
-    print(f"    Media da funcao objetivo : {array_historico.mean():.2f}")
-    print(f"    Pior funcao objetivo     : {array_historico.min():.2f}")
-    print(f"    Desvio padrao            : {array_historico.std():.2f}")
+    print("  Estatísticas das iterações:")
+    print(f"    Melhor FO : {array_historico.max():.2f}")
+    print(f"    Média FO  : {array_historico.mean():.2f}")
+    print(f"    Pior  FO  : {array_historico.min():.2f}")
+    print(f"    Desvio dp : {array_historico.std():.2f}")
     print(separador)
 
-    return melhor_solucao, melhor_fo, pontos_cobertos, historico_fo, historico_fo_antes_busca_local, historico_fo_pos_busca_local
+    return (
+        melhor_solucao, 
+        melhor_fo, 
+        pontos_cobertos, 
+        historico_fo, 
+        historico_fo_antes_busca_local, 
+        historico_fo_pos_busca_local,
+    )
 
 
 if __name__ == "__main__":
-    # dataframe = ler_instancia("instances/instancia_aleatoria_01_100p.csv")
+    dataframe = ler_instancia("instances/instancia_aleatoria_01_100p.csv")
 
-    dataframe = ler_instancia("instances/instancia.csv")
+    # dataframe = ler_instancia("instances/instancia.csv")
 
     melhor_solucao, melhor_fo, pontos_cobertos, historico_fo, historico_pre_busca_local, historico_pos_busca_local = executar_grasp(
         dataframe                  = dataframe,
@@ -198,6 +185,7 @@ if __name__ == "__main__":
         max_iteracoes              = MAX_ITERACOES,
         max_iteracoes_sem_melhora  = MAX_ITERACOES_SEM_MELHORA,
         semente_aleatoria          = SEMENTE_ALEATORIA,
+        tempo_limite_s= 3600, # 1 hora em segundos
     )
 
     plotar_funcao_objetivo_por_iteracao(
@@ -205,5 +193,5 @@ if __name__ == "__main__":
     )
 
     plotar_comparacao_funcao_objetivo_antes_e_apos_busca_local(
-        historico_pre_busca_local, historico_pos_busca_local
+        historico_fo_antes_busca_local_f1=historico_pre_busca_local, historico_fo_pos_busca_local_f1=historico_pos_busca_local
     )
