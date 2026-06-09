@@ -290,5 +290,5 @@ pyrightconfig.json
 
 *.pkl
 teste.*
-instances/*.csv
-/instances/*.csv
+# instances/*.csv
+# /instances/*.csv
