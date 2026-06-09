@@ -168,7 +168,18 @@ def executar_fase2(
     print()
     print("=" * 70)
     print("FASE 2 — DM-GRASP guiado (mineração única)")
-    print(f"  Pesos minerados: {len(pesos_candidatos)}")
+    quantidade_padroes = len(pesos_candidatos)
+    quantidade_itens = getattr(
+        pesos_candidatos,
+        "quantidade_itens_ponderados",
+        len(pesos_candidatos),
+    )
+    suporte_minimo = getattr(pesos_candidatos, "suporte_minimo", None)
+
+    print(f"  Padroes maximos minerados: {quantidade_padroes}")
+    print(f"  Itens ponderados: {quantidade_itens}")
+    if suporte_minimo is not None:
+        print(f"  Suporte minimo absoluto: {suporte_minimo}")
     if tempo_limite_total_s is not None and tempo_inicio_global is not None:
         tempo_restante = tempo_limite_total_s - (time.time() - tempo_inicio_global)
         print(f"  Tempo restante para Fase 2: {max(tempo_restante, 0):.1f}s")
@@ -383,7 +394,7 @@ def executar_dm_grasp(
 if __name__ == "__main__":
 
     # dataframe = ler_instancia("instances/instancia.csv")
-    dataframe = ler_instancia("instances/instancia_aleatoria_01_100p.csv")
+    dataframe = ler_instancia("instances/instancia_aleatoria_01_1000p.csv")
 
     (
         melhor_solucao,

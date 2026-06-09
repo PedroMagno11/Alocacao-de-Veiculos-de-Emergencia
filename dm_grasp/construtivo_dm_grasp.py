@@ -30,10 +30,11 @@ def construir_solucao_dm(
                     pontos_cobertos[id_regiao][tipo] - cobertura_atual
                 )
 
-                peso = pesos_candidatos.get(
-                    (id_regiao, tipo),
-                    1.0
-                )
+                candidato = (id_regiao, tipo)
+                if hasattr(pesos_candidatos, "peso_contextual"):
+                    peso = pesos_candidatos.peso_contextual(candidato, solucao)
+                else:
+                    peso = pesos_candidatos.get(candidato, 1.0)
 
                 ganho_dm = ganho_original * peso
 
