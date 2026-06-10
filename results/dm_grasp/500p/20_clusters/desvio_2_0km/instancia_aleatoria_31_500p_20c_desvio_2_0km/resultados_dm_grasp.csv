@@ -1,0 +1,2 @@
+metodo,instancia,arquivo_instancia,caminho_instancia,n_pontos,clusters,desvio_cluster_km,semente,fo,tempo_s,iteracoes_fase1,iteracoes_fase2,melhor_fo_fase1,melhor_fo_fase2
+DM-GRASP,500p_20c_desvio_2_0km,instancia_aleatoria_31_500p_20c_desvio_2_0km,instances\500p\20_clusters\desvio_2_0km\instancia_aleatoria_31_500p_20c_desvio_2_0km.csv,500,20,2.0,42,339.0000,33.3787,100,200,339.0000,339.0000

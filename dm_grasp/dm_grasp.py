@@ -394,7 +394,7 @@ def executar_dm_grasp(
 if __name__ == "__main__":
 
     # dataframe = ler_instancia("instances/instancia.csv")
-    dataframe = ler_instancia("instances/instancia_aleatoria_01_100p.csv")
+    dataframe = ler_instancia("instances/2000p/17_clusters/desvio_1_5km/instancia_aleatoria_74_2000p_17c_desvio_1_5km.csv")
 
     (
         melhor_solucao,

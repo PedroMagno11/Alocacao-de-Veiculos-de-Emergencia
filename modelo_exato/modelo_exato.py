@@ -16,10 +16,10 @@ sujeito a:
 import gurobipy as gp
 from gurobipy import GRB
 
-import config.PARAMETROS as PARAMETROS
+from config import PARAMETROS
 from instances.read_instance import ler_instancia, pre_computar_pontos_cobertos
 
-CAMINHO_INSTANCIA = "instances/instancia_aleatoria_01_50p.csv"
+CAMINHO_INSTANCIA = "instances/100p/8_clusters/desvio_1_0km/instancia_aleatoria_01_100p_8c_desvio_1_0km.csv"
 # CAMINHO_INSTANCIA = "instancia.csv"
 
 
