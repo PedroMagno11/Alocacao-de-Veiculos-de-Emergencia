@@ -1,0 +1,4 @@
+instancia,arquivo_instancia,caminho_instancia,n_pontos,clusters,desvio_cluster_km,semente,exato_fo,exato_tempo_s,grasp_fo,grasp_tempo_s,dmgrasp_fo,dmgrasp_tempo_s,gap_grasp_pct,gap_dmgrasp_pct
+2000p_12c_desvio_5_0km,instancia_aleatoria_72_2000p_12c_desvio_5_0km,instances\2000p\12_clusters\desvio_5_0km\instancia_aleatoria_72_2000p_12c_desvio_5_0km.csv,2000,12,5.0,42,910.0000,191.6806,1298.0000,121.5762,1298.0000,118.7642,-42.64,-42.64
+2000p_8c_desvio_1_5km,instancia_aleatoria_66_2000p_8c_desvio_1_5km,instances\2000p\8_clusters\desvio_1_5km\instancia_aleatoria_66_2000p_8c_desvio_1_5km.csv,2000,8,1.5,42,1183.0000,6.5315,1938.0000,264.0567,1938.0000,250.7878,-63.82,-63.82
+3000p_1c_desvio_1_5km,instancia_aleatoria_123_3000p_1c_desvio_1_5km,instances\3000p\1_clusters\desvio_1_5km\instancia_aleatoria_123_3000p_1c_desvio_1_5km.csv,3016,1,1.5,42,,,2981.0000,3519.3412,2981.0000,3629.8408,,

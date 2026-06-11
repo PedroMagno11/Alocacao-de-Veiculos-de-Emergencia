@@ -29,18 +29,18 @@ import numpy as np
 # ──────────────────────────────────────────────────────────────
 # Parâmetros experimentais
 # ──────────────────────────────────────────────────────────────
+import config.PARAMETROS as P
 
-# SEMENTES          = [42, 43, 44, 45, 46]
-SEMENTES          = [42]
+ALPHA = P.PARAMETRO_ALPHA
+MAX_ITER_SEM_MEL = P.MAX_ITERACOES_SEM_MELHORA
+SEMENTES = [P.SEMENTE_ALEATORIA]
+
 TAMANHOS          = [100, 500, 1000, 1500, 2000]
 PASTA_INSTANCIAS  = Path("instances")
 PASTA_RESULTADOS  = Path("results")
 
-# Parâmetros dos métodos heurísticos
-ALPHA             = 0.6
-ITERACOES_FASE1   = 100
-ITERACOES_FASE2   = 200
-MAX_ITER_SEM_MEL  = None
+ITERACOES_FASE1   = 150
+ITERACOES_FASE2   = 150
 TAM_ELITE         = 40
 FREQ_MINIMA       = 0.3
 
@@ -225,13 +225,21 @@ def rodar_exato(dataframe, tipos_ambulancia, qtd_maxima):
             pontos_cobertos=pontos_cobertos,
         )
         modelo.setParam("OutputFlag", 1)
+        modelo.setParam("SoftMemLimit", 8)
+        modelo.setParam("TimeLimit", TEMPO_LIMITE_S)
 
         t0 = time.perf_counter()
         modelo.optimize()
         tempo = time.perf_counter() - t0
 
-        if modelo.Status == GRB.OPTIMAL:
+        if modelo.SolCount > 0:
+            print(
+                f"    [Exato] Status={modelo.Status} "
+                f"FO={modelo.ObjVal:.2f} "
+                f"Gap={modelo.MIPGap*100:.2f}%"
+            )
             return modelo.ObjVal, tempo
+
         return None, None
     except Exception as e:
         print(f"    [Exato] Falhou: {e}")

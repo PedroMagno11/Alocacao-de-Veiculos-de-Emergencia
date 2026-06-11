@@ -394,7 +394,7 @@ def executar_dm_grasp(
 if __name__ == "__main__":
 
     # dataframe = ler_instancia("instances/instancia.csv")
-    dataframe = ler_instancia("instances/2000p/17_clusters/desvio_1_5km/instancia_aleatoria_74_2000p_17c_desvio_1_5km.csv")
+    dataframe = ler_instancia("instances/2000p/12_clusters/desvio_5_0km/instancia_aleatoria_72_2000p_12c_desvio_5_0km.csv")
 
     (
         melhor_solucao,
@@ -411,8 +411,8 @@ if __name__ == "__main__":
         tipos_ambulancia=TIPOS_AMBULANCIA,
         quantidade_maxima_por_tipo=QUANTIDADE_MAXIMA_POR_TIPO,
         parametro_alpha=PARAMETRO_ALPHA,
-        iteracoes_fase1=100,
-        iteracoes_fase2=200,
+        iteracoes_fase1=150,
+        iteracoes_fase2=150,
         max_iteracoes_sem_melhora=MAX_ITERACOES_SEM_MELHORA,
         semente_aleatoria=SEMENTE_ALEATORIA,
         tamanho_memoria_elite=40,
