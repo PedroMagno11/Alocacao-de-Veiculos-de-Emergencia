@@ -5,11 +5,7 @@ A memoria elite e tratada como uma base transacional:
   - cada solucao elite e uma transacao;
   - cada alocacao (regiao, tipo) e um item.
 
-O minerador abaixo segue a ideia do FPMax*: encontrar conjuntos frequentes
-maximos, isto e, padroes frequentes que nao estao contidos em nenhum outro
-padrao frequente maior. A implementacao usa uma representacao vertical por
-tidsets para manter o codigo simples e adequado ao tamanho das solucoes do
-PMCS-FA, sem depender de bibliotecas externas.
+O minerador abaixo segue a ideia do FPMax*: encontrar conjuntos frequentes.
 """
 
 from dataclasses import dataclass

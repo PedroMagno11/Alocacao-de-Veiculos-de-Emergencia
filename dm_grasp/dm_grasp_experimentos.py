@@ -4,22 +4,7 @@ Executável DM-GRASP para o PMCS-FA.
 Este script permite rodar o DM-GRASP separadamente em uma ou várias instâncias,
 salvando automaticamente resultados e figuras.
 
-Estrutura esperada das instâncias:
-
-    instances/100p/8_clusters/desvio_1_0km/*.csv
-
-Saída gerada:
-
-    results/dm_grasp/100p/8_clusters/desvio_1_0km/<nome_instancia>/
-        resultados_dm_grasp.csv
-        solucao_dm_grasp.csv
-        fig1_convergencia.png
-        fig2_antes_apos_bl.png
-
-    results/dm_grasp/consolidado/
-        resultados_dm_grasp_geral.csv
-
-Exemplos:
+Como rodar:
 
     python -m dm_grasp.dm_grasp_experimentos
 

@@ -1,2 +1,0 @@
-instancia,arquivo_instancia,caminho_instancia,n_pontos,clusters,desvio_cluster_km,semente,exato_fo,exato_tempo_s,grasp_fo,grasp_tempo_s,dmgrasp_fo,dmgrasp_tempo_s,gap_grasp_pct,gap_dmgrasp_pct
-100p_2c_desvio_2_0km,instancia_aleatoria_02_100p_2c_desvio_2_0km,instances\100p\2_clusters\desvio_2_0km\instancia_aleatoria_02_100p_2c_desvio_2_0km.csv,100,2,2.0,42,100.0000,243.9413,100.0000,2.7614,100.0000,2.2570,0.00,0.00
